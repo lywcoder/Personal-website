@@ -2,6 +2,56 @@
 
 网站源码位于 `personal-website/`，是无需构建的 HTML / CSS / JavaScript 静态网站。
 GitHub 个人主页：https://github.com/lywcoder
+正式域名：https://linyiweics.cn
+
+## 发布到现有阿里云服务器
+
+部署脚本已固定使用你确认的服务器 `root@101.200.242.179:22`，站点目录为 `/www/wwwroot/linyiweics.cn/`。
+脚本不保存密码，通过 SSH/SCP 自身的终端提示完成登录；首次连接需核对服务器的 SSH 主机指纹。
+
+在你自己的 PowerShell 中执行：
+
+```powershell
+Set-Location 'E:\Code\Personal website'
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\Deploy-Website.ps1
+```
+
+`ExecutionPolicy Bypass` 仅应用于这次启动的 PowerShell 进程，不更改系统的持久执行策略。
+SSH 和 SCP 分别连接时可能会要求多次输入服务器密码，输入时终端不会显示字符。
+使用本机私钥登录时，可在命令后增加 `-IdentityFile '你的私钥文件路径'`；无需把密钥上传至仓库。
+
+脚本执行顺序：
+
+1. 检查六个网站文件和两个公开邮箱链接，生成 SHA-256 校验清单。
+2. 上传至独立的 `/root/linyiweics-site-upload-时间戳-随机编号/` 暂存目录，核对文件哈希并运行 `nginx -t`。
+3. 将完整旧站备份至 `/root/linyiweics.cn-backup-时间戳-随机编号/`，备份完成后打印回退命令。
+4. 仅复制六个公开站点文件，设置文件权限为 644；保留其他文件、面板配置和 SSL 配置。静态文件发布无需重启 Nginx。
+5. 校验发布后的哈希，检查本机 Nginx 的 HTTP 响应，以及公网 HTTPS 证书和主页内容。
+
+如果只想检查本地文件、不登录或改动服务器：
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\Deploy-Website.ps1 -CheckOnly
+```
+
+如果出现 `HTTPS NEEDS ATTENTION`，表示文件已上传发布，但 HTTPS 验证尚未通过；脚本会报错并保留备份，不修改证书配置或跳过证书校验。
+若 HTTP 状态为 200、但返回 `Welcome to nginx!`，应优先检查 HTTPS 虚拟站点的 `root` 和 `index`，是否仍指向默认欢迎页目录，以及是否匹配了正确的 `server_name`。
+HTTP 的 301 跳转正常也不能证明 HTTPS 站点在使用同一个网站目录。
+若配置路径在 `/www/server/nginx/conf/nginx.conf` 与 `/etc/nginx/nginx.conf` 之间变化，先在服务器运行以下只读命令，确认命令路径、运行中的主进程和配置；当前 shell 的 `nginx -T` 不一定对应正在提供请求的实例：
+
+```bash
+type -a nginx
+ps -ef | grep '[n]ginx: master'
+nginx -T 2>&1 | grep -n -B 12 -A 45 'server_name.*linyiweics'
+```
+
+先查看 `nginx -T` 中该域名的 `server_name`、443 监听和证书配置，再检查安全组、防火墙、DNS 或缓存。
+修正配置后先执行 `nginx -t`，通过后再 `nginx -s reload`。
+若 Nginx 配置中只有 80 监听，就仍需完成该域名的 HTTPS 配置。
+
+若需回退，使用脚本打印的实际备份路径，在服务器终端执行对应的 `cp -a` 回退命令；它会恢复旧文件，保留额外文件。
+备份和暂存目录留在 Web 根目录之外，便于排错；验收后可按实际保留需求清理。
+最后在浏览器打开正式域名并按 Ctrl + F5，检查头像、手机菜单、深浅主题、GitHub 和邮箱链接。
 
 ## 本地预览
 
@@ -22,20 +72,20 @@ python -m http.server 8000 --bind 127.0.0.1 --directory personal-website
 2. **先写两三篇有内容的文章。** 可从阿里云部署记录、机器学习课程练习复盘或聚类算法实验入手。这些是选题建议，尚未作为已完成项目或已发布文章展示。
 3. **项目说明要有证据。** 算法实验记录数据集、运行方式、评价指标和局限；部署文章记录架构、遇到的问题与解决方式，配图时遮挡账号和服务器敏感信息。
 4. **博客规模增长后再引入静态生成。** 当前手写页面足够。文章多起来时，可评估用 Markdown 管理文章并生成静态页面，避免过早加入数据库、登录和后台管理。
-5. **有正式域名后完善搜索展示。** 增加 canonical、分享预览图、robots.txt 和 sitemap.xml，并统一根域名与 www 的访问入口。当前未填写猜测的域名。
+5. **围绕正式域名完善搜索展示。** 后续为 https://linyiweics.cn 增加 canonical、分享预览图、robots.txt 和 sitemap.xml，并按证书与 DNS 的实际情况统一根域名与 www 的访问入口。
 6. **优化图片。** 现有头像约 480 KB、图标约 641 KB；后续生成适合头像展示尺寸的 WebP/AVIF 和小尺寸 favicon，以减少首次加载流量。
 
 ## 公开信息的选择
 
 - 展示学校、专业、技术基础、研究兴趣及 GitHub。
-- 暂不发布手机号、原始简历，也不公开包含手机号的简历邮箱；未核实的旧邮箱与占位社交账号已移除。当前公开入口为 GitHub 个人主页，它不是消息发送服务。
-- 如果需要直接联系，补充一个你确认用于公开展示的邮箱，再添加 mailto 链接。
+- 暂不发布独立的手机联系方式或原始简历；未核实的旧邮箱与占位社交账号已移除。
+- 按你的明确要求公开 QQ 邮箱 `1390451354@qq.com` 和 Gmail `lin18601013891@gmail.com`，并提供 mailto 链接，同时保留 GitHub。
 - 若要提供简历下载，先制作专门的公开版本。成绩、排名和英语成绩可按科研申请或求职的目标选择加入，并注明时间与评分口径。
 - 联系表单原先只会延时显示“发送成功”，没有实际投递功能，已移除。以后确实需要表单时再接服务端与邮件投递，并在服务端处理校验、限流与错误反馈。
 
 ## 阿里云部署建议
 
-以下方案根据当前纯静态页面提出，未连接或变更你的云账号。部署前先确认已有产品、所在地域、域名与备案进度。
+以下保留不同部署方式的参考。你现有服务器请优先使用上面的部署脚本；当前连接测试已到达 SSH 服务，但登录认证未通过，尚未自动执行服务器备份或发布。
 
 ### 已有 ECS 或轻量应用服务器：优先复用
 

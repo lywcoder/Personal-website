@@ -927,6 +927,25 @@ a:focus-visible, button:focus-visible {
     margin: 0.75rem 0 1.5rem;
     color: var(--text-secondary);
 }
+.contact-emails {
+    margin-top: 1.5rem;
+    text-align: left;
+}
+.contact-emails > div {
+    padding: 1rem 0;
+    border-top: 1px solid var(--border-color);
+}
+.contact-emails dt {
+    color: var(--text-secondary);
+    font-size: 0.875rem;
+    margin-bottom: 0.25rem;
+}
+.contact-emails dd { margin: 0; min-width: 0; }
+.contact-emails a {
+    color: var(--primary-color);
+    overflow-wrap: anywhere;
+}
+.contact-emails a:hover { text-decoration: underline; }
 
 @media (prefers-reduced-motion: reduce) {
     html { scroll-behavior: auto; }
